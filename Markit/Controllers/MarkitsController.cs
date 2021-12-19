@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Markit.Data;
 using Markit.Models;
 
+
 namespace Markit.Controllers
 {
     public class MarkitsController : Controller
@@ -20,9 +21,33 @@ namespace Markit.Controllers
         }
 
         // GET: Markits
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string authorTop, string searchString)
         {
-            return View(await _context.Markit.ToListAsync());
+            // Use LINQ to get list of genres.
+            IQueryable<string> genreQuery = (IQueryable<string>)(from m in _context.Markit
+                                            orderby m.AuthorTopTenViewModel.Tops
+                                            select m.AuthorTopTenViewModel.Tops);
+
+            var markits = from m in _context.Markit
+                         select m;
+
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                markits = markits.Where(s => s.Author.Contains(searchString));
+            }
+
+            if (!string.IsNullOrEmpty(authorTop))
+            {
+                markits = markits.Where(x => x.Tops == authorTop);
+            }
+
+            var authorTopVM = new AuthorTopTenViewModel
+            {
+                Tops = new SelectList(await genreQuery.Distinct().ToListAsync()),
+                Markits = await markits.ToListAsync()
+            };
+
+            return View(authorTopVM);
         }
 
         // GET: Markits/Details/5
